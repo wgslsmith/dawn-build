@@ -34,6 +34,10 @@ jobs:
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
           echo "$HOME/depot_tools" >> $GITHUB_PATH
 
+      - name: Install windows dependencies
+        if: matrix.os == 'windows-latest'
+        run: choco install ninja
+
       - name: Install linux dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
@@ -51,7 +55,8 @@ jobs:
           gclient sync
 
       - name: Set cmake generator
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'windows-latest' || matrix.os == 'ubuntu-latest'
+        shell: bash
         run: echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
 
       - name: Build dawn
