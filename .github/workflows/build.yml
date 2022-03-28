@@ -1,0 +1,71 @@
+name: build
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        target:
+          - win64
+          - macos64
+          - linux64
+        include:
+          - target: win64
+            os: windows-latest
+          - target: macos64
+            os: macos-latest
+          - target: linux64
+            os: ubuntu-latest
+
+    steps:
+      - name: Checkout git repo
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Install depot_tools
+        shell: bash
+        run: |
+          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
+          echo "$HOME/depot_tools" >> $GITHUB_PATH
+
+      - name: Install linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install libxrandr-dev libxinerama-dev libx11-dev libxcursor-dev libxi-dev \
+            libxext-dev libxcb-shm0-dev libxtst-dev libx11-xcb-dev ninja-build
+
+      - name: Fetch dawn dependencies
+        working-directory: dawn
+        shell: bash
+        env:
+          DEPOT_TOOLS_WIN_TOOLCHAIN: "0"
+        run: |
+          cp scripts/standalone.gclient .gclient
+          gclient sync
+
+      - name: Set cmake generator
+        if: matrix.os == 'ubuntu-latest'
+        run: echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
+
+      - name: Build dawn
+        shell: bash
+        run: |
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY=$(pwd)/lib ../dawn
+          cmake --build . --target dawn_native dawn_proc
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: dawn-static-${{ matrix.target }}
+          path: |
+            build/gen/**/*
+            build/lib/**/*
