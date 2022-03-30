@@ -81,3 +81,39 @@ jobs:
           path: |
             build/gen/**/*
             build/lib/**/*
+
+  release:
+    runs-on: ubuntu-20.04
+    needs: build
+    if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout git repo
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Create git tag
+        id: create-git-tag
+        run: |
+          tag="autobuild-$(date -u '+%Y-%m-%d-%H-%M')"
+          git tag $tag
+          git push origin $tag
+          echo "::set-output name=TAG::$tag"
+          echo "::set-output name=COMMIT::$(git --git-dir dawn/.git rev-parse HEAD)"
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Prepare artifacts
+        run: |
+          for target in win64 macos64 linux64; do
+            echo "${{ steps.create-git-tag.outputs.COMMIT }}" > dawn-static-$target/COMMIT
+            tar -czvf dawn-static-$target.tar.gz dawn-static-$target/*
+          done
+
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          gh release create ${{ steps.create-git-tag.outputs.TAG }} dawn-static-*.tar.gz \
+            -n "dawn@${{ steps.create-git-tag.outputs.COMMIT }}"
