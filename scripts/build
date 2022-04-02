@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+set -euxo pipefail
+
+# Checkout dawn submodule
+if [[ ! -d "dawn" ]] || ! find dawn -mindepth 1 -maxdepth 1 | read; then
+    git submodule update --init
+fi
+
+pushd dawn
+
+# Bootstrap gclient config if it doesn't exist
+if [[ ! -f ".gclient" ]]; then
+    cp scripts/standalone.gclient .gclient
+fi
+
+# Fetch dawn dependencies
+gclient sync
+
+popd
+
+mkdir -p build
+cd build
+
+cmake_args=(
+    "-GNinja"
+    "-DCMAKE_BUILD_TYPE=Release"
+    "-DCMAKE_ARCHIVE_OUTPUT_DIRECTORY=$(pwd)/lib"
+)
+
+if [[ -n "${LLVM_NATIVE_TOOLCHAIN-}" ]]; then
+    cmake_args+=("-DLLVM_NATIVE_TOOLCHAIN=$LLVM_NATIVE_TOOLCHAIN")
+fi
+
+if [[ -n "${XWIN_CACHE-}" ]]; then
+    cmake_args+=("-DXWIN_CACHE=$XWIN_CACHE")
+fi
+
+# Do the build
+cmake "${cmake_args[@]}" ../dawn
+cmake --build . --target dawn_native dawn_proc

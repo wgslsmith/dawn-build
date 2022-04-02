@@ -16,14 +16,11 @@ jobs:
           - linux64
         include:
           - target: win64
-            os: windows-latest
+            os: ubuntu-latest
           - target: macos64
             os: macos-latest
           - target: linux64
             os: ubuntu-latest
-
-    env:
-      MACOSX_DEPLOYMENT_TARGET: "11.0"
 
     steps:
       - name: Checkout git repo
@@ -37,45 +34,50 @@ jobs:
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
           echo "$HOME/depot_tools" >> $GITHUB_PATH
 
-      - name: Install windows dependencies
-        if: matrix.os == 'windows-latest'
-        run: choco install ninja
+      - name: Cache windows sdk
+        id: cache-windows-sdk
+        if: matrix.target == 'win64'
+        uses: actions/cache@v3
+        with:
+          path: .xwin-cache
+          key: xwin-cache
 
-      - name: Install linux dependencies
+      - name: Download windows sdk
+        if: matrix.target == 'win64' && steps.cache-windows-sdk.outputs.cache-hit != 'true'
+        run: |
+          curl -L https://github.com/Jake-Shadle/xwin/releases/download/0.2.0/xwin-0.2.0-x86_64-unknown-linux-musl.tar.gz > $HOME/xwin.tar.gz
+          tar -xvf $HOME/xwin.tar.gz -C $HOME
+          sudo mv $HOME/xwin-0.2.0-x86_64-unknown-linux-musl/xwin /usr/bin
+          xwin --accept-license splat --include-debug-libs
+
+      - name: Install ninja
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
+          sudo apt-get install ninja-build
+
+      - name: Install windows dependencies
+        if: matrix.target == 'win64'
+        run: |
+          sudo apt-get install clang-12 clang-tools-12 llvm-12
+
+      - name: Install linux dependencies
+        if: matrix.target == 'linux64'
+        run: |
           sudo apt-get install libxrandr-dev libxinerama-dev libx11-dev libxcursor-dev libxi-dev \
-            libxext-dev libxcb-shm0-dev libxtst-dev libx11-xcb-dev ninja-build
+            libxext-dev libxcb-shm0-dev libxtst-dev libx11-xcb-dev
 
-      - name: Fetch dawn dependencies
-        working-directory: dawn
-        shell: bash
-        env:
-          DEPOT_TOOLS_WIN_TOOLCHAIN: "0"
+      - name: Setup cmake toolchain for windows
+        if: matrix.target == 'win64'
         run: |
-          cp scripts/standalone.gclient .gclient
-          gclient sync
-
-      - name: Set cmake generator
-        if: matrix.os == 'windows-latest' || matrix.os == 'ubuntu-latest'
-        shell: bash
-        run: echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
-
-      - name: Set cmake compilers
-        if: matrix.os == 'windows-latest'
-        shell: bash
-        run: |
-          echo "CC=clang" >> $GITHUB_ENV
-          echo "CXX=clang" >> $GITHUB_ENV
+          echo "CMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/cmake/WinMsvc.cmake" >> $GITHUB_ENV
+          echo "LLVM_NATIVE_TOOLCHAIN=/usr/lib/llvm-12" >> $GITHUB_ENV
+          echo "XWIN_CACHE=${{ github.workspace }}/.xwin-cache" >> $GITHUB_ENV
 
       - name: Build dawn
-        shell: bash
-        run: |
-          mkdir build
-          cd build
-          cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY=$(pwd)/lib ../dawn
-          cmake --build . --target dawn_native dawn_proc
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
+        run: ./scripts/build
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
