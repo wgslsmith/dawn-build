@@ -16,7 +16,7 @@ jobs:
           - linux64
         include:
           - target: win64
-            os: ubuntu-latest
+            os: ubuntu-22.04
           - target: macos64
             os: macos-latest
           - target: linux64
@@ -59,7 +59,7 @@ jobs:
       - name: Install windows dependencies
         if: matrix.target == 'win64'
         run: |
-          sudo apt-get install clang-12 clang-tools-12 llvm-12
+          sudo apt-get install clang-14 clang-tools-14 llvm-14 lld-14
 
       - name: Install linux dependencies
         if: matrix.target == 'linux64'
@@ -71,7 +71,7 @@ jobs:
         if: matrix.target == 'win64'
         run: |
           echo "CMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/cmake/WinMsvc.cmake" >> $GITHUB_ENV
-          echo "LLVM_NATIVE_TOOLCHAIN=/usr/lib/llvm-12" >> $GITHUB_ENV
+          echo "LLVM_NATIVE_TOOLCHAIN=/usr/lib/llvm-14" >> $GITHUB_ENV
           echo "XWIN_CACHE=${{ github.workspace }}/.xwin-cache" >> $GITHUB_ENV
 
       - name: Build dawn
