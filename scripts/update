@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+set -euxo pipefail
+
+cd dawn
+
+git pull origin main
+gclient sync
+
+cd ../build
+
+cmake --build . --target dawn_native dawn_proc
