@@ -4,6 +4,7 @@ set -euxo pipefail
 
 cd dawn
 
+git checkout main
 git pull origin main
 gclient sync
 
