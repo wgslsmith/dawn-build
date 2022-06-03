@@ -36,6 +36,8 @@ if [[ -n "${XWIN_CACHE-}" ]]; then
     cmake_args+=("-DXWIN_CACHE=$XWIN_CACHE")
 fi
 
+export CXXFLAGS="-Wno-float-equal"
+
 # Do the build
 cmake "${cmake_args[@]}" ../dawn
 cmake --build . --target dawn_native dawn_proc
