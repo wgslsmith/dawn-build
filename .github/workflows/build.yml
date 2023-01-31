@@ -16,7 +16,7 @@ jobs:
           - linux64
         include:
           - target: win64
-            os: ubuntu-22.04
+            os: ubuntu-latest
           - target: macos64
             os: macos-latest
           - target: linux64
@@ -50,11 +50,16 @@ jobs:
           sudo mv $HOME/xwin-0.2.0-x86_64-unknown-linux-musl/xwin /usr/bin
           xwin --accept-license splat --include-debug-libs
 
-      - name: Install ninja
+      - name: Install ninja (linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install ninja-build
+
+      - name: Install ninja (macos)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install ninja
 
       - name: Install windows dependencies
         if: matrix.target == 'win64'
