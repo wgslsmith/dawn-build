@@ -36,6 +36,8 @@ if [[ -n "${XWIN_CACHE-}" ]]; then
     cmake_args+=("-DXWIN_CACHE=$XWIN_CACHE")
 fi
 
+cmake_args+=("$@")
+
 export CXXFLAGS="-Wno-float-equal"
 
 # Do the build

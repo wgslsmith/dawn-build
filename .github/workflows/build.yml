@@ -24,7 +24,7 @@ jobs:
 
     steps:
       - name: Checkout git repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           submodules: true
 
@@ -37,7 +37,7 @@ jobs:
       - name: Cache windows sdk
         id: cache-windows-sdk
         if: matrix.target == 'win64'
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: .xwin-cache
           key: xwin-cache
@@ -45,9 +45,9 @@ jobs:
       - name: Download windows sdk
         if: matrix.target == 'win64' && steps.cache-windows-sdk.outputs.cache-hit != 'true'
         run: |
-          curl -L https://github.com/Jake-Shadle/xwin/releases/download/0.2.0/xwin-0.2.0-x86_64-unknown-linux-musl.tar.gz > $HOME/xwin.tar.gz
+          curl -L https://github.com/Jake-Shadle/xwin/releases/download/0.6.7/xwin-0.6.7-x86_64-unknown-linux-musl.tar.gz > $HOME/xwin.tar.gz
           tar -xvf $HOME/xwin.tar.gz -C $HOME
-          sudo mv $HOME/xwin-0.2.0-x86_64-unknown-linux-musl/xwin /usr/bin
+          sudo mv $HOME/xwin-0.6.7-x86_64-unknown-linux-musl/xwin /usr/bin
           xwin --accept-license splat --include-debug-libs
 
       - name: Install ninja (linux)
@@ -64,7 +64,7 @@ jobs:
       - name: Install windows dependencies
         if: matrix.target == 'win64'
         run: |
-          sudo apt-get install clang-14 clang-tools-14 llvm-14 lld-14
+          sudo apt-get install clang-19 clang-tools-19 llvm-19 lld-19
 
       - name: Install linux dependencies
         if: matrix.target == 'linux64'
@@ -76,16 +76,23 @@ jobs:
         if: matrix.target == 'win64'
         run: |
           echo "CMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/cmake/WinMsvc.cmake" >> $GITHUB_ENV
-          echo "LLVM_NATIVE_TOOLCHAIN=/usr/lib/llvm-14" >> $GITHUB_ENV
+          echo "LLVM_NATIVE_TOOLCHAIN=/usr/lib/llvm-19" >> $GITHUB_ENV
           echo "XWIN_CACHE=${{ github.workspace }}/.xwin-cache" >> $GITHUB_ENV
 
       - name: Build dawn
         env:
           MACOSX_DEPLOYMENT_TARGET: "11.0"
-        run: ./scripts/build
+        run: |
+          EXTRA_CMAKE_ARGS=""
+          
+          if [ "${{ matrix.target }}" == "win64" ]; then
+            EXTRA_CMAKE_ARGS="-DDAWN_FORCE_SYSTEM_COMPONENT_LOAD=ON"
+          fi
+          
+          ./scripts/build $EXTRA_CMAKE_ARGS
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dawn-static-${{ matrix.target }}
           path: |
@@ -93,12 +100,12 @@ jobs:
             build/lib/**/*
 
   release:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs: build
     if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout git repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           submodules: true
 
@@ -108,11 +115,11 @@ jobs:
           tag="autobuild-$(date -u '+%Y-%m-%d-%H-%M')"
           git tag $tag
           git push origin $tag
-          echo "::set-output name=TAG::$tag"
-          echo "::set-output name=COMMIT::$(git --git-dir dawn/.git rev-parse HEAD)"
+          echo "TAG=$tag" >> $GITHUB_OUTPUT
+          echo "COMMIT=$(git --git-dir dawn/.git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
 
       - name: Prepare artifacts
         run: |
@@ -123,7 +130,7 @@ jobs:
 
       - name: Create release
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create ${{ steps.create-git-tag.outputs.TAG }} dawn-static-*.tar.gz \
             -n "dawn@${{ steps.create-git-tag.outputs.COMMIT }}"
