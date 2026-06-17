@@ -26,6 +26,8 @@ cmake_args=(
     "-GNinja"
     "-DCMAKE_BUILD_TYPE=Release"
     "-DCMAKE_ARCHIVE_OUTPUT_DIRECTORY=$(pwd)/lib"
+    "-DCMAKE_CXX_SCAN_FOR_MODULES=OFF"
+    "-DDAWN_SUPPORTS_CXX_MODULES=OFF"
 )
 
 if [[ -n "${LLVM_NATIVE_TOOLCHAIN-}" ]]; then
