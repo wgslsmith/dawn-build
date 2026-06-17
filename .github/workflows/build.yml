@@ -70,7 +70,8 @@ jobs:
         if: matrix.target == 'linux64'
         run: |
           sudo apt-get install libxrandr-dev libxinerama-dev libx11-dev libxcursor-dev libxi-dev \
-            libxext-dev libxcb-shm0-dev libxtst-dev libx11-xcb-dev
+            libxext-dev libxcb-shm0-dev libxtst-dev libx11-xcb-dev wayland-protocols libwayland-dev \
+            libwayland-bin libxkbcommon-dev
 
       - name: Setup cmake toolchain for windows
         if: matrix.target == 'win64'
