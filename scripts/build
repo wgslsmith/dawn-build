@@ -47,4 +47,4 @@ export CXXFLAGS="-Wno-float-equal"
 
 # Do the build
 cmake "${cmake_args[@]}" ../dawn
-cmake --build . --target dawn_native dawn_proc
+cmake --build . --target dawn_native dawn_proc tint_cmd_common tint_cmd_tint_cmd
