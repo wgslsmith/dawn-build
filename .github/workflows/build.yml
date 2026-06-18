@@ -40,7 +40,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .xwin-cache
-          key: xwin-cache
+          key: xwin-cache-v2
 
       - name: Download windows sdk
         if: matrix.target == 'win64' && steps.cache-windows-sdk.outputs.cache-hit != 'true'
@@ -48,7 +48,7 @@ jobs:
           curl -L https://github.com/Jake-Shadle/xwin/releases/download/0.6.7/xwin-0.6.7-x86_64-unknown-linux-musl.tar.gz > $HOME/xwin.tar.gz
           tar -xvf $HOME/xwin.tar.gz -C $HOME
           sudo mv $HOME/xwin-0.6.7-x86_64-unknown-linux-musl/xwin /usr/bin
-          xwin --accept-license splat --include-debug-libs
+          xwin --accept-license --include-atl splat --include-debug-libs
 
       - name: Install ninja (linux)
         if: matrix.os == 'ubuntu-latest'
@@ -61,8 +61,8 @@ jobs:
         run: |
           brew install ninja
 
-      - name: Install windows dependencies
-        if: matrix.target == 'win64'
+      - name: Install clang
+        if: matrix.target == 'win64' || matrix.target == 'linux64'
         run: |
           sudo apt-get install clang-19 clang-tools-19 llvm-19 lld-19
 
@@ -85,6 +85,11 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: "11.0"
         run: |
           EXTRA_CMAKE_ARGS=""
+          
+          if [ "${{ matrix.target }}" == "linux64" ] || [ "${{ matrix.target }}" == "win64" ]; then
+            export CC=clang-19
+            export CXX=clang++-19
+          fi
           
           if [ "${{ matrix.target }}" == "win64" ]; then
             EXTRA_CMAKE_ARGS="-DDAWN_FORCE_SYSTEM_COMPONENT_LOAD=ON"
